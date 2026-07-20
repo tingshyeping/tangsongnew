@@ -403,8 +403,7 @@
     </div>
 
     <script>
-        // ============ DOM 元素 ============
-    // ============ DOM 元素 ============
+       // ============ DOM 元素 ============
     const videoContainer = document.getElementById('videoContainer');
     const introVideo = document.getElementById('introVideo');
     const mainPage = document.getElementById('mainPage');
@@ -424,13 +423,14 @@
 
     // ============ 背景音乐系统 ============
     const bgMusic = new Audio();
-    bgMusic.preload = 'auto';   // 预加载
+    bgMusic.preload = 'auto';
     bgMusic.src = 'bgm.mp3';
     bgMusic.loop = true;
     bgMusic.volume = 0.5;
 
     let isMusicPlaying = false;
-    let musicManuallyStopped = false;  // 用户是否手动停止
+    let musicStarted = false;
+    let musicManuallyStopped = false;
 
     const musicToggleBtn = document.getElementById('musicToggleBtn');
     const volumeSlider = document.getElementById('volumeSlider');
@@ -438,40 +438,46 @@
 
     // 启动音乐
     function startMusic() {
-        if (musicManuallyStopped) return;  // 用户手动停止后不自动启动
+        if (musicStarted || musicManuallyStopped) return;
         bgMusic.play().then(() => {
             isMusicPlaying = true;
+            musicStarted = true;
             musicToggleBtn.textContent = '🔊';
             musicToggleBtn.classList.add('playing');
-        }).catch(() => {});
+        }).catch(err => {
+            console.log('自动播放被阻止，等待用户交互');
+            musicToggleBtn.textContent = '🔇';
+        });
     }
 
-    // 暂停音乐（不重置进度）
-    function pauseMusic() {
-        bgMusic.pause();
-        isMusicPlaying = false;
-        musicToggleBtn.textContent = '🔇';
-        musicToggleBtn.classList.remove('playing');
-    }
-
-    // 完全停止音乐（重置进度）
+    // 停止音乐
     function stopMusic() {
         bgMusic.pause();
         bgMusic.currentTime = 0;
         isMusicPlaying = false;
+        musicStarted = false;
         musicToggleBtn.textContent = '🔇';
         musicToggleBtn.classList.remove('playing');
     }
 
-    // 播放/暂停切换（用户手动控制）
+    // 播放/暂停切换
     function toggleMusic() {
-        if (isMusicPlaying) {
-            // 暂停音乐
-            pauseMusic();
-            musicManuallyStopped = true;   // 标记为手动停止
+        if (!musicStarted || (!isMusicPlaying && musicManuallyStopped)) {
+            musicManuallyStopped = false;
+            bgMusic.play().then(() => {
+                isMusicPlaying = true;
+                musicStarted = true;
+                musicToggleBtn.textContent = '🔊';
+                musicToggleBtn.classList.add('playing');
+            }).catch(() => {});
+        } else if (isMusicPlaying) {
+            bgMusic.pause();
+            isMusicPlaying = false;
+            musicManuallyStopped = true;
+            musicToggleBtn.textContent = '🔇';
+            musicToggleBtn.classList.remove('playing');
         } else {
-            // 恢复播放
-            musicManuallyStopped = false;  // 取消手动停止标记
+            musicManuallyStopped = false;
             bgMusic.play().then(() => {
                 isMusicPlaying = true;
                 musicToggleBtn.textContent = '🔊';
@@ -494,41 +500,11 @@
         }
     }
 
-    // ============ 视频与音乐同步逻辑 ============
-    // 视频开始播放 → 同步启动音乐
+    // ============ 视频逻辑 ============
+    // 视频开始播放 → 尝试启动音乐
     introVideo.addEventListener('play', function() {
-        if (musicManuallyStopped) return;  // 用户手动停了就不自动播
-        // 将音乐进度同步到视频进度
-        syncMusicToVideo();
         startMusic();
     });
-
-    // 视频暂停 → 同步暂停音乐
-    introVideo.addEventListener('pause', function() {
-        if (isMusicPlaying) {
-            bgMusic.pause();
-            isMusicPlaying = false;
-            musicToggleBtn.textContent = '🔇';
-            musicToggleBtn.classList.remove('playing');
-        }
-    });
-
-    // 视频跳转（seek）→ 同步音乐进度
-    introVideo.addEventListener('seeked', function() {
-        if (!musicManuallyStopped) {
-            syncMusicToVideo();
-        }
-    });
-
-    // 同步音乐进度到视频进度
-    function syncMusicToVideo() {
-        // 计算视频播放百分比
-        const videoPercent = introVideo.currentTime / introVideo.duration;
-        // 将音乐设置到相同百分比位置
-        if (bgMusic.duration && isFinite(bgMusic.duration)) {
-            bgMusic.currentTime = videoPercent * bgMusic.duration;
-        }
-    }
 
     // 视频播放结束 → 显示主页
     introVideo.addEventListener('ended', function() {
@@ -550,16 +526,28 @@
         }, 1000);
     }
 
-    // ============ 用户首次交互：启动音乐 ============
-    videoContainer.addEventListener('click', function() {
-        musicManuallyStopped = false;
-        startMusic();
+    // ============ 自动启动音乐（多种策略）============
+    // 策略1：视频播放时触发
+    introVideo.addEventListener('play', startMusic);
+
+    // 策略2：视频加载完成时尝试
+    introVideo.addEventListener('loadeddata', function() {
+        setTimeout(startMusic, 500);
     });
 
-    document.addEventListener('click', function initOnClick() {
-        if (!isMusicPlaying && !musicManuallyStopped) {
-            startMusic();
-        }
+    // 策略3：用户移动鼠标时触发（仅一次）
+    document.addEventListener('mousemove', function autoPlayOnMove() {
+        startMusic();
+    }, { once: true });
+
+    // 策略4：用户点击页面任意位置（仅一次）
+    document.addEventListener('click', function autoPlayOnClick() {
+        startMusic();
+    }, { once: true });
+
+    // 策略5：用户触摸屏幕（移动端）
+    document.addEventListener('touchstart', function autoPlayOnTouch() {
+        startMusic();
     }, { once: true });
 
     // ============ 跳转选择页面 ============
@@ -585,7 +573,7 @@
         }
     });
 
-    // ============ 页面离开 ============
+    // ============ 页面离开时暂停 ============
     window.addEventListener('beforeunload', () => {
         bgMusic.pause();
     });
