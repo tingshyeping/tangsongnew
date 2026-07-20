@@ -355,6 +355,19 @@
     </style>
 </head>
 <body>
+    <!-- 放在 <body> 最开头 -->
+<div id="audioPrompt" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:3000;display:flex;justify-content:center;align-items:center;cursor:pointer;">
+    <div style="color:#ffd700;font-size:2rem;letter-spacing:5px;text-align:center;">
+        🔊 点击任意位置开始体验<br>
+        <span style="font-size:1rem;color:#c9a96e;">Click to Start</span>
+    </div>
+</div>
+<script>
+document.getElementById('audioPrompt').addEventListener('click', function() {
+    startMusic();
+    this.style.display = 'none';
+});
+</script>
 
     <!-- ============ 开场视频 ============ -->
     <div id="videoContainer">
