@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择您的作家 - 唐宋八大家</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+    width: 100vw;
+    min-height: 100vh;          /* ← 改为 min-height */
+    overflow-x: hidden;         /* ← 只隐藏横向滚动 */
+    overflow-y: auto;           /* ← 允许垂直滚动 */
+    background: #000;
+    font-family: "KaiTi", "Microsoft YaHei", "PingFang SC", "Noto Serif SC", serif;
+    cursor: default;
+    user-select: none;
+}
+
+        /* ============ 主容器 ============ */
+.select-container {
+    width: 100%;
+    min-height: 100vh;          /* ← 改为 min-height */
+    background: radial-gradient(ellipse at center, #1a0a00 0%, #0a0300 40%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-y: auto;           /* ← 添加这一行，允许垂直滚动 */
+    overflow-x: hidden;         /* ← 添加这一行，隐藏横向滚动 */
+}
+
+        /* ============ 顶部标题栏 ============ */
+        .top-bar {
+            position: relative;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 80%, transparent 100%);
+        }
+
+        .top-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #ffd700;
+            letter-spacing: 10px;
+            text-shadow: 0 0 30px #ff8c00, 0 0 60px #ff4500;
+            animation: titlePulse 3s infinite;
+        }
+
+        @keyframes titlePulse {
+            0%,
+            100% {
+                text-shadow: 0 0 30px #ff8c00, 0 0 60px #ff4500;
+            }
+            50% {
+                text-shadow: 0 0 50px #ffd700, 0 0 100px #ff8c00;
+            }
+        }
+
+        .back-home {
+            position: absolute;
+            left: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #c9a96e;
+            text-decoration: none;
+            font-size: 1rem;
+            letter-spacing: 3px;
+            border: 1px solid #c9a96e;
+            padding: 8px 20px;
+            transition: all 0.3s;
+            z-index: 101;
+        }
+
+        .back-home:hover {
+            background: #c9a96e;
+            color: #000;
+        }
+
+        /* ============ 英雄选择区域 ============ */
+        .hero-grid {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;    /* ← 改为 flex-start */
+    gap: 25px;
+    padding: 20px 60px 60px;    /* ← 底部多加一些内边距 */
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 50;
+    min-height: 500px;          /* ← 添加最小高度 */
+}
+
+        /* ============ 单个英雄卡片 ============ */
+        .hero-card {
+            position: relative;
+            width: 170px;
+            height: 420px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid rgba(201, 169, 110, 0.4);
+            background: rgba(20, 10, 0, 0.6);
+            flex-shrink: 0;
+        }
+
+        .hero-card:hover {
+            transform: translateY(-15px) scale(1.05);
+            border-color: #ffd700;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 20px 50px rgba(0, 0, 0, 0.7);
+            z-index: 200;
+        }
+
+        /* 英雄背景图片 */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.4s;
+            filter: brightness(0.7);
+        }
+
+        .hero-card:hover .hero-bg {
+            filter: brightness(1);
+            transform: scale(1.1);
+        }
+
+        /* 默认名字标签（始终显示在底部） */
+        .hero-name-tag {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.8) 30%, rgba(0, 0, 0, 0.95) 100%);
+            padding: 50px 10px 20px;
+            text-align: center;
+            transition: all 0.4s;
+            z-index: 10;
+        }
+
+        .hero-name-tag .name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #ffd700;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px #ff8c00;
+        }
+
+        /* ============ 悬停信息面板（从左侧滑出） ============ */
+        .hero-info-panel {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 5, 0, 0.92);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 20;
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+        }
+
+        .hero-card:hover .hero-info-panel {
+            left: 0;
+        }
+
+        .hero-info-panel .info-name {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #ffd700;
+            letter-spacing: 5px;
+            margin-bottom: 8px;
+        }
+
+        .hero-info-panel .info-zi {
+            font-size: 1.1rem;
+            color: #e0d5c0;
+            letter-spacing: 3px;
+            margin-bottom: 5px;
+        }
+
+        .hero-info-panel .info-hao {
+            font-size: 1rem;
+            color: #c9a96e;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .hero-info-panel .info-dynasty {
+            font-size: 0.9rem;
+            color: #ff8c00;
+            letter-spacing: 3px;
+            padding: 5px 15px;
+            border: 1px solid #ff8c00;
+            border-radius: 20px;
+            margin-top: 10px;
+        }
+
+        .info-divider {
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #c9a96e, transparent);
+            margin: 12px 0;
+        }
+
+        /* 选择按钮 */
+        .select-hero-btn {
+            margin-top: 15px;
+            background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+            color: #1a0a00;
+            border: none;
+            padding: 10px 30px;
+            font-size: 1rem;
+            font-weight: 900;
+            letter-spacing: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-family: inherit;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
+
+        .select-hero-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.9);
+        }
+
+        /* ============ 底部提示 ============ */
+        .bottom-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #c9a96e;
+            font-size: 0.9rem;
+            letter-spacing: 4px;
+            z-index: 100;
+            animation: hintBlink 2s infinite;
+        }
+
+        @keyframes hintBlink {
+            0%,
+            100% {
+                opacity: 0.4;
+            }
+            50% {
+                opacity: 1;
+            }
+        }
+
+        /* ============ 响应式 ============ */
+        @media (max-width: 1400px) {
+            .hero-card {
+                width: 140px;
+                height: 360px;
+            }
+            .hero-grid {
+                gap: 15px;
+                padding: 10px 30px;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .hero-card {
+                width: 110px;
+                height: 300px;
+            }
+            .hero-grid {
+                gap: 10px;
+                padding: 10px 15px;
+            }
+            .top-title {
+                font-size: 1.8rem;
+                letter-spacing: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="select-container">
+        <!-- 顶部标题 -->
+        <div class="top-bar">
+            <a href="index.html" class="back-home">← 返回首页</a>
+            <div class="top-title">请 选 择 您 的 作 家</div>
+        </div>
+
+        <!-- 英雄网格 -->
+        <div class="hero-grid" id="heroGrid">
+            <!-- JS动态生成 -->
+        </div>
+
+        <!-- 底部提示 -->
+        <div class="bottom-hint">将鼠标悬停在英雄上查看详细信息</div>
+    </div>
+
+    <script>
+        // ============ 唐宋八大家数据 ============
+        const scholars = [{
+            id: 'hanyu',
+            name: '韩愈',
+            zi: '字退之',
+            hao: '号昌黎先生',
+            dynasty: '唐 代',
+            page: 'hanyu.html',
+            img: 'images/hanyu.jpg'
+        }, {
+            id: 'liuzongyuan',
+            name: '柳宗元',
+            zi: '字子厚',
+            hao: '号柳河东',
+            dynasty: '唐 代',
+            page: 'liuzongyuan.html',
+            img: 'images/liuzongyuan.jpeg'
+        }, {
+            id: 'ouyangxiu',
+            name: '欧阳修',
+            zi: '字永叔',
+            hao: '号六一居士',
+            dynasty: '北 宋',
+            page: 'ouyangxiu.html',
+            img: 'images/ouyangxiu.jpg'
+        }, {
+            id: 'suxun',
+            name: '苏洵',
+            zi: '字明允',
+            hao: '号老泉',
+            dynasty: '北 宋',
+            page: 'suxun.html',
+            img: 'images/suxun.jpg'
+        }, {
+            id: 'sushi',
+            name: '苏轼',
+            zi: '字子瞻',
+            hao: '号东坡居士',
+            dynasty: '北 宋',
+            page: 'sushi.html',
+            img: 'images/sushi.jpeg'
+        }, {
+            id: 'suzhe',
+            name: '苏辙',
+            zi: '字子由',
+            hao: '号颍滨遗老',
+            dynasty: '北 宋',
+            page: 'suzhe.html',
+            img: 'images/suzhe.jpg'
+        }, {
+            id: 'wanganshi',
+            name: '王安石',
+            zi: '字介甫',
+            hao: '号半山',
+            dynasty: '北 宋',
+            page: 'wanganshi.html',
+            img: 'images/wanganshi.jpg'
+        }, {
+            id: 'zenggong',
+            name: '曾巩',
+            zi: '字子固',
+            hao: '号南丰先生',
+            dynasty: '北 宋',
+            page: 'zenggong.html',
+            img: 'images/zenggong.jpeg'
+        }];
+
+        // ============ 渲染英雄卡片 ============
+        const heroGrid = document.getElementById('heroGrid');
+
+        scholars.forEach(scholar => {
+            const card = document.createElement('div');
+            card.className = 'hero-card';
+            card.innerHTML = `
+                        <!-- 英雄背景图 -->
+                        <img class="hero-bg" src="${scholar.img}" 
+                             alt="${scholar.name}" 
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22400%22><rect fill=%22%23331a00%22 width=%22200%22 height=%22400%22/><text x=%22100%22 y=%22200%22 text-anchor=%22middle%22 fill=%22%23c9a96e%22 font-size=%2230%22>${scholar.name}</text></svg>'">
+
+                        <!-- 底部名字标签 -->
+                        <div class="hero-name-tag">
+                            <div class="name">${scholar.name}</div>
+                        </div>
+
+                        <!-- 悬停信息面板（从左侧滑入） -->
+                        <div class="hero-info-panel">
+                            <div class="info-name">${scholar.name}</div>
+                            <div class="info-divider"></div>
+                            <div class="info-zi">${scholar.zi}</div>
+                            <div class="info-hao">${scholar.hao}</div>
+                            <div class="info-dynasty">${scholar.dynasty}</div>
+                            <button class="select-hero-btn" onclick="selectScholar('${scholar.page}')">选 择 该 作 家</button>
+                        </div>
+                    `;
+            heroGrid.appendChild(card);
+        });
+
+        // ============ 选择英雄跳转 ============
+        function selectScholar(page) {
+            // 添加过渡效果
+            document.body.style.transition = 'opacity 0.3s ease';
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                window.location.href = page;
+            }, 300);
+        }
+
+        // ============ 键盘快捷键 ============
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

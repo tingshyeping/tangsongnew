@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://db.onlinewebfonts.com/c/db06deb90e37840ea564f982bed24d55?family=FZYingBiKaiShu-S15S" rel="stylesheet">
+    <link rel="shortcut icon" href="images/favicon.png" type="image/png">
+    <title>唐宋八大家 - 王者之路</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            font-family: "KaiTi", "Microsoft YaHei", "PingFang SC", "Noto Serif SC", serif;
+            cursor: default;
+            user-select: none;
+        }
+
+        /* ============ 开场视频容器 ============ */
+        #videoContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+        }
+
+        #videoContainer.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #introVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        #skipBtn {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #c9a96e;
+            border: 2px solid #c9a96e;
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            z-index: 1001;
+            letter-spacing: 3px;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        #skipBtn:hover {
+            background: #c9a96e;
+            color: #000;
+        }
+
+        /* ============ 主页面（视频结束后显示） ============ */
+        #mainPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 500;
+            display: none;
+            background: radial-gradient(ellipse at center, #1a0a00 0%, #0a0500 50%, #000 100%);
+        }
+
+        #mainPage.show {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 背景装饰 */
+        .bg-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            background: #c9a96e;
+            border-radius: 50%;
+            animation: floatUp 4s infinite;
+            opacity: 0;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.8;
+            }
+            80% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1.5);
+                opacity: 0;
+            }
+        }
+
+        /* ============ 音乐控制面板 ============ */
+        .music-control {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(201, 169, 110, 0.5);
+            border-radius: 30px;
+            padding: 8px 18px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .music-btn {
+            background: none;
+            border: none;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .music-btn:hover {
+            transform: scale(1.2);
+            filter: drop-shadow(0 0 8px #ffd700);
+        }
+
+        .music-btn.playing {
+            animation: musicPulse 1.5s infinite;
+        }
+
+        @keyframes musicPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        .volume-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .volume-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 80px;
+            height: 5px;
+            background: linear-gradient(90deg, #c9a96e, #ffd700);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #ffd700;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #ffd700;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px #ffd700;
+        }
+
+        .volume-label {
+            color: #c9a96e;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            min-width: 35px;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 600px) {
+            .music-control {
+                bottom: 20px;
+                left: 15px;
+                padding: 6px 12px;
+                gap: 8px;
+            }
+            .music-btn {
+                font-size: 1.4rem;
+            }
+            .volume-slider {
+                width: 60px;
+            }
+        }
+
+        /* 标题 */
+        .main-title {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .main-title .chinese {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 40px #ff8c00, 0 0 80px #ff4500, 0 0 120px #ff0000;
+            letter-spacing: 8px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes titleGlow {
+            0% {
+                text-shadow: 0 0 40px #ff8c00, 0 0 80px #ff4500;
+            }
+            100% {
+                text-shadow: 0 0 80px #ffd700, 0 0 150px #ff8c00, 0 0 200px #ff4500;
+            }
+        }
+
+        .main-title .english {
+            font-size: 0.9rem;
+            color: #c9a96e;
+            letter-spacing: 4px;
+            margin-top: 10px;
+        }
+
+        /* 团队介绍卡片 */
+        .team-card {
+            position: relative;
+            z-index: 10;
+            background: rgba(20, 10, 0, 0.85);
+            border: 2px solid #c9a96e;
+            border-radius: 10px;
+            padding: 20px 30px;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(201, 169, 110, 0.3), inset 0 0 30px rgba(201, 169, 110, 0.1);
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .team-card h2 {
+            color: #ffd700;
+            font-size: 1.3rem;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .team-card .members {
+            color: #e0d5c0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .team-card .members span {
+            color: #ffd700;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .team-card .mission {
+            color: #c9a96e;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            letter-spacing: 1px;
+            font-style: italic;
+            border-top: 1px solid rgba(201, 169, 110, 0.3);
+            padding-top: 8px;
+            margin-top: 5px;
+        }
+
+        /* 开始游戏按钮 */
+        .start-btn {
+            position: relative;
+            z-index: 10;
+            margin-top: 20px;
+            background: linear-gradient(180deg, #ffd700 0%, #b8860b 50%, #8b6914 100%);
+            color: #1a0a00;
+            border: 3px solid #ffd700;
+            padding: 12px 45px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            letter-spacing: 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s infinite;
+            font-family: inherit;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 80px rgba(255, 215, 0, 0.8), 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 40px rgba(255, 215, 0, 0.5), 0 10px 30px rgba(0, 0, 0, 0.5);
+            }
+            50% {
+                box-shadow: 0 0 70px rgba(255, 215, 0, 0.9), 0 10px 40px rgba(0, 0, 0, 0.6);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============ 开场视频 ============ -->
+    <div id="videoContainer">
+        <video id="introVideo" autoplay muted playsinline>
+            <source src="intro.mp4" type="video/mp4">
+            您的浏览器不支持视频播放
+        </video>
+        <button id="skipBtn" onclick="skipVideo()">跳 过</button>
+    </div>
+
+    <!-- ============ 音乐控制面板 ============ -->
+    <div class="music-control" id="musicControl">
+        <button class="music-btn" id="musicToggleBtn" onclick="toggleMusic()" title="播放/暂停">🔇</button>
+        <div class="volume-slider-container" id="volumeContainer">
+            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50" oninput="changeVolume(this.value)" title="音量调节">
+            <span class="volume-label" id="volumeLabel">50%</span>
+        </div>
+    </div>
+
+    <!-- ============ 主页面 ============ -->
+    <div id="mainPage">
+        <div class="bg-particles" id="particles"></div>
+        <div class="main-title">
+            <div class="chinese">唐 宋 八 大 家</div>
+            <div class="english">EIGHT GREAT MASTERS</div>
+        </div>
+        <div class="team-card">
+            <h2>⚔ 开 发 团 队 ⚔</h2>
+            <div class="members">
+                <p>队长：<span>________</span></p>
+                <p>成员：<span>________</span></p>
+                <p>成员：<span>________</span></p>
+                <p>成员：<span>________</span></p>
+            </div>
+            <div class="mission">
+                「 以王者之姿，承千古文脉 」
+                <br>
+                我们致力于让唐宋八大家的文学精神，
+                <br>
+                在数字时代焕发新的生命力。
+                <br>
+                文以载道，武以振魂。
+            </div>
+        </div>
+        <button class="start-btn" onclick="goToSelect()">开 始 游 戏</button>
+    </div>
+
+    <script>
+        // ============ DOM 元素 ============
+    // ============ DOM 元素 ============
+    const videoContainer = document.getElementById('videoContainer');
+    const introVideo = document.getElementById('introVideo');
+    const mainPage = document.getElementById('mainPage');
+    const particlesContainer = document.getElementById('particles');
+
+    // ============ 生成背景粒子 ============
+    for (let i = 0; i < 50; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.width = Math.random() * 4 + 2 + 'px';
+        particle.style.height = particle.style.width;
+        particle.style.animationDelay = Math.random() * 4 + 's';
+        particle.style.animationDuration = Math.random() * 3 + 3 + 's';
+        particlesContainer.appendChild(particle);
+    }
+
+    // ============ 背景音乐系统 ============
+    const bgMusic = new Audio();
+    bgMusic.preload = 'auto';   // 预加载
+    bgMusic.src = 'bgm.mp3';
+    bgMusic.loop = true;
+    bgMusic.volume = 0.5;
+
+    let isMusicPlaying = false;
+    let musicManuallyStopped = false;  // 用户是否手动停止
+
+    const musicToggleBtn = document.getElementById('musicToggleBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeLabel = document.getElementById('volumeLabel');
+
+    // 启动音乐
+    function startMusic() {
+        if (musicManuallyStopped) return;  // 用户手动停止后不自动启动
+        bgMusic.play().then(() => {
+            isMusicPlaying = true;
+            musicToggleBtn.textContent = '🔊';
+            musicToggleBtn.classList.add('playing');
+        }).catch(() => {});
+    }
+
+    // 暂停音乐（不重置进度）
+    function pauseMusic() {
+        bgMusic.pause();
+        isMusicPlaying = false;
+        musicToggleBtn.textContent = '🔇';
+        musicToggleBtn.classList.remove('playing');
+    }
+
+    // 完全停止音乐（重置进度）
+    function stopMusic() {
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+        isMusicPlaying = false;
+        musicToggleBtn.textContent = '🔇';
+        musicToggleBtn.classList.remove('playing');
+    }
+
+    // 播放/暂停切换（用户手动控制）
+    function toggleMusic() {
+        if (isMusicPlaying) {
+            // 暂停音乐
+            pauseMusic();
+            musicManuallyStopped = true;   // 标记为手动停止
+        } else {
+            // 恢复播放
+            musicManuallyStopped = false;  // 取消手动停止标记
+            bgMusic.play().then(() => {
+                isMusicPlaying = true;
+                musicToggleBtn.textContent = '🔊';
+                musicToggleBtn.classList.add('playing');
+            }).catch(() => {});
+        }
+    }
+
+    // 音量调节
+    function changeVolume(value) {
+        const volume = value / 100;
+        bgMusic.volume = volume;
+        volumeLabel.textContent = value + '%';
+        if (value == 0) {
+            musicToggleBtn.textContent = '🔇';
+        } else if (value < 50) {
+            musicToggleBtn.textContent = '🔉';
+        } else {
+            musicToggleBtn.textContent = '🔊';
+        }
+    }
+
+    // ============ 视频与音乐同步逻辑 ============
+    // 视频开始播放 → 同步启动音乐
+    introVideo.addEventListener('play', function() {
+        if (musicManuallyStopped) return;  // 用户手动停了就不自动播
+        // 将音乐进度同步到视频进度
+        syncMusicToVideo();
+        startMusic();
+    });
+
+    // 视频暂停 → 同步暂停音乐
+    introVideo.addEventListener('pause', function() {
+        if (isMusicPlaying) {
+            bgMusic.pause();
+            isMusicPlaying = false;
+            musicToggleBtn.textContent = '🔇';
+            musicToggleBtn.classList.remove('playing');
+        }
+    });
+
+    // 视频跳转（seek）→ 同步音乐进度
+    introVideo.addEventListener('seeked', function() {
+        if (!musicManuallyStopped) {
+            syncMusicToVideo();
+        }
+    });
+
+    // 同步音乐进度到视频进度
+    function syncMusicToVideo() {
+        // 计算视频播放百分比
+        const videoPercent = introVideo.currentTime / introVideo.duration;
+        // 将音乐设置到相同百分比位置
+        if (bgMusic.duration && isFinite(bgMusic.duration)) {
+            bgMusic.currentTime = videoPercent * bgMusic.duration;
+        }
+    }
+
+    // 视频播放结束 → 显示主页
+    introVideo.addEventListener('ended', function() {
+        showMainPage();
+    });
+
+    // 跳过视频
+    function skipVideo() {
+        introVideo.pause();
+        showMainPage();
+    }
+
+    // 显示主页
+    function showMainPage() {
+        videoContainer.classList.add('hide');
+        mainPage.classList.add('show');
+        setTimeout(() => {
+            videoContainer.style.display = 'none';
+        }, 1000);
+    }
+
+    // ============ 用户首次交互：启动音乐 ============
+    videoContainer.addEventListener('click', function() {
+        musicManuallyStopped = false;
+        startMusic();
+    });
+
+    document.addEventListener('click', function initOnClick() {
+        if (!isMusicPlaying && !musicManuallyStopped) {
+            startMusic();
+        }
+    }, { once: true });
+
+    // ============ 跳转选择页面 ============
+    function goToSelect() {
+        mainPage.style.transition = 'opacity 0.5s ease';
+        mainPage.style.opacity = '0';
+        setTimeout(() => {
+            window.location.href = 'select.html';
+        }, 500);
+    }
+
+    // ============ 键盘快捷键 ============
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && mainPage.classList.contains('show')) {
+            goToSelect();
+        }
+        if (e.key === 'Escape' && !videoContainer.classList.contains('hide')) {
+            skipVideo();
+        }
+        if (e.key.toLowerCase() === 'm' && e.target === document.body) {
+            e.preventDefault();
+            toggleMusic();
+        }
+    });
+
+    // ============ 页面离开 ============
+    window.addEventListener('beforeunload', () => {
+        bgMusic.pause();
+    });
+    </script>
+</body>
+</html>

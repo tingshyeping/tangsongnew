@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墨家机关道 - 唐宋八大家</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #000;
+            font-family: "KaiTi", "Microsoft YaHei", "PingFang SC", serif;
+            user-select: none;
+            cursor: crosshair;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* HUD */
+        .hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .hud-player,
+        .hud-enemy {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #c9a96e;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: #ffd700;
+            letter-spacing: 3px;
+        }
+
+        .hud-player .name,
+        .hud-enemy .name {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .hp-bar-outer {
+            width: 200px;
+            height: 15px;
+            background: #333;
+            border-radius: 10px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .hp-bar-inner {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00cc66);
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        .enemy-hp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #cc0000);
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+
+        .crystal-hp {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #ffd700;
+        }
+
+        /* 消息提示 */
+        .message-center {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffd700;
+            font-size: 2rem;
+            font-weight: 900;
+            letter-spacing: 8px;
+            pointer-events: none;
+            z-index: 200;
+            text-shadow: 0 0 30px #ff4500;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .message-center.show {
+            opacity: 1;
+        }
+
+        /* 攻击提示 */
+        .attack-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffd700;
+            font-size: 1.2rem;
+            letter-spacing: 4px;
+            z-index: 150;
+            pointer-events: none;
+            text-shadow: 0 0 15px #ff8c00;
+            animation: hintPulse 1.5s infinite;
+        }
+
+        @keyframes hintPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* 结束面板 */
+        .end-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 300;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .end-panel.show {
+            display: flex;
+        }
+
+        .end-title {
+            font-size: 3rem;
+            color: #ffd700;
+            letter-spacing: 10px;
+            text-shadow: 0 0 50px #ff8c00;
+            margin-bottom: 20px;
+        }
+
+        .end-stats {
+            color: #e0d5c0;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            line-height: 2;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .end-btn {
+            background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+            color: #1a0a00;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            letter-spacing: 8px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .end-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div class="hud">
+        <div class="hud-player">
+            <div class="name" id="playerName">玩家</div>
+            <div class="hp-bar-outer"><div class="hp-bar-inner" id="playerHpBar" style="width:100%"></div></div>
+            <div class="crystal-hp">🏰 我方水晶: <span id="playerCrystalHp">100</span></div>
+        </div>
+        <div class="hud-enemy">
+            <div class="name">敌方水晶</div>
+            <div class="hp-bar-outer"><div class="enemy-hp-bar" id="enemyHpBar" style="width:100%"></div></div>
+            <div class="crystal-hp">🏰 敌方水晶: <span id="enemyCrystalHp">100</span></div>
+        </div>
+    </div>
+
+    <!-- 消息 -->
+    <div class="message-center" id="messageCenter"></div>
+
+    <!-- 攻击提示 -->
+    <div class="attack-hint">🖱 点击 [鼠标左键] 进行攻击</div>
+
+    <!-- 结束面板 -->
+    <div class="end-panel" id="endPanel">
+        <div class="end-title" id="endTitle"></div>
+        <div class="end-stats" id="endStats"></div>
+        <button class="end-btn" onclick="goHome()">返 回 首 页</button>
+    </div>
+
+    <script>
+        // ============ 获取选中的英雄 ============
+        const heroData = JSON.parse(sessionStorage.getItem('selectedHero')) || {
+            id: 'hanyu',
+            name: '韩愈',
+            img: 'images/hanyu.jpg'
+        };
+
+        // ============ Canvas 设置 ============
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // ============ 游戏状态 ============
+        const GAME_STATE = {
+            PLAYING: 'playing',
+            WIN: 'win',
+            LOSE: 'lose'
+        };
+
+        let gameState = GAME_STATE.PLAYING;
+        let playerCrystalHp = 100;
+        let enemyCrystalHp = 100;
+        let kills = 0;
+        let deaths = 0;
+        let gameEnded = false;
+
+        // ============ 鼠标状态 ============
+        let mouseX = 0;
+        let mouseY = 0;
+        let mouseDown = false;
+
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                mouseDown = true;
+                e.preventDefault();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                mouseDown = false;
+            }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // ============ 玩家 ============
+        const player = {
+            x: canvas.width * 0.15,
+            y: canvas.height * 0.7,
+            width: 45,
+            height: 45,
+            speed: 5,
+            hp: 150,
+            maxHp: 150,
+            attackCooldown: 0,
+            attackCooldownMax: 15,
+            attackRange: 100,
+            attackDamage: 25,
+            color: '#00ff88',
+            name: heroData.name,
+            invincible: 0
+        };
+
+        // ============ 敌方英雄池 ============
+        const enemyNames = ['韩愈', '柳宗元', '欧阳修', '苏洵', '苏轼', '苏辙', '王安石', '曾巩'];
+        const enemyPool = enemyNames.filter(n => n !== heroData.name);
+
+        // ============ 敌人数组 ============
+        let enemies = [];
+        const MAX_ENEMIES = 2;
+
+        function spawnEnemy() {
+            if (enemies.length >= MAX_ENEMIES) return;
+            const name = enemyPool[Math.floor(Math.random() * enemyPool.length)];
+            const enemy = {
+                x: canvas.width * 0.7 + Math.random() * 200,
+                y: canvas.height * 0.2 + Math.random() * (canvas.height * 0.5),
+                width: 35,
+                height: 35,
+                speed: 1 + Math.random() * 1.5,
+                hp: 40,
+                maxHp: 40,
+                attackCooldown: 0,
+                attackCooldownMax: 80,
+                attackRange: 55,
+                attackDamage: 8,
+                color: '#ff4444',
+                name: name,
+                targetCrystal: false,
+                moveTimer: Math.random() * 100
+            };
+            enemies.push(enemy);
+        }
+
+        // 初始生成敌人
+        for (let i = 0; i < MAX_ENEMIES; i++) {
+            spawnEnemy();
+        }
+
+        // ============ 按键状态（仅移动）============
+        const keys = {};
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'w', 'a', 's', 'd'].includes(e.key.toLowerCase())) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        // ============ 水晶位置 ============
+        const playerCrystal = {
+            x: canvas.width * 0.05,
+            y: canvas.height * 0.5,
+            width: 70,
+            height: 90,
+            color: '#00ff88'
+        };
+
+        const enemyCrystal = {
+            x: canvas.width * 0.9,
+            y: canvas.height * 0.5,
+            width: 70,
+            height: 90,
+            color: '#ff4444'
+        };
+
+        // ============ 显示消息 ============
+        function showMessage(text, duration = 1500) {
+            const msg = document.getElementById('messageCenter');
+            msg.textContent = text;
+            msg.classList.add('show');
+            setTimeout(() => msg.classList.remove('show'), duration);
+        }
+
+        // ============ 更新HUD ============
+        function updateHUD() {
+            document.getElementById('playerName').textContent = heroData.name;
+            document.getElementById('playerHpBar').style.width = (player.hp / player.maxHp * 100) + '%';
+            document.getElementById('playerCrystalHp').textContent = Math.max(0, Math.floor(playerCrystalHp));
+            document.getElementById('enemyHpBar').style.width = (enemyCrystalHp / 100 * 100) + '%';
+            document.getElementById('enemyCrystalHp').textContent = Math.max(0, Math.floor(enemyCrystalHp));
+        }
+
+        // ============ 攻击检测 ============
+        function attackEnemy() {
+            if (player.attackCooldown > 0) return;
+            player.attackCooldown = player.attackCooldownMax;
+
+            let hitSomething = false;
+
+            // 攻击范围内的敌人
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < player.attackRange) {
+                    enemy.hp -= player.attackDamage;
+                    hitSomething = true;
+
+                    if (enemy.hp <= 0) {
+                        enemies.splice(i, 1);
+                        kills++;
+                        showMessage('💀 击杀 ' + enemy.name + '！');
+                        setTimeout(() => {
+                            if (gameState === GAME_STATE.PLAYING) spawnEnemy();
+                        }, 3000);
+                    }
+                }
+            }
+
+            // 攻击敌方水晶
+            const cdx = player.x - (enemyCrystal.x + enemyCrystal.width / 2);
+            const cdy = player.y - (enemyCrystal.y + enemyCrystal.height / 2);
+            const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+
+            if (cdist < player.attackRange + 30) {
+                enemyCrystalHp -= player.attackDamage;
+                hitSomething = true;
+                showMessage('🏰 攻击水晶！-' + player.attackDamage);
+                if (enemyCrystalHp <= 0 && !gameEnded) {
+                    gameState = GAME_STATE.WIN;
+                    gameEnded = true;
+                }
+            }
+
+            if (!hitSomething) {
+                showMessage('💨 攻击落空！', 800);
+            }
+        }
+
+        // ============ 敌人AI ============
+        function updateEnemies() {
+            enemies.forEach(enemy => {
+                enemy.moveTimer++;
+
+                if (enemy.moveTimer > 200) {
+                    enemy.targetCrystal = Math.random() < 0.3;
+                    enemy.moveTimer = 0;
+                }
+
+                let targetX, targetY;
+
+                if (enemy.targetCrystal) {
+                    targetX = playerCrystal.x + playerCrystal.width / 2;
+                    targetY = playerCrystal.y + playerCrystal.height / 2;
+                } else {
+                    targetX = player.x;
+                    targetY = player.y;
+                }
+
+                const dx = targetX - enemy.x;
+                const dy = targetY - enemy.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > 5) {
+                    enemy.x += (dx / dist) * enemy.speed;
+                    enemy.y += (dy / dist) * enemy.speed;
+                }
+
+                // 攻击水晶
+                const cdx = enemy.x - (playerCrystal.x + playerCrystal.width / 2);
+                const cdy = enemy.y - (playerCrystal.y + playerCrystal.height / 2);
+                const cdist = Math.sqrt(cdx * cdx + cdy * cdy);
+
+                if (cdist < 70 && enemy.attackCooldown <= 0) {
+                    enemy.attackCooldown = enemy.attackCooldownMax;
+                    playerCrystalHp -= 3;
+                    if (playerCrystalHp <= 0 && !gameEnded) {
+                        gameState = GAME_STATE.LOSE;
+                        gameEnded = true;
+                    }
+                }
+
+                // 攻击玩家
+                const pdx = enemy.x - player.x;
+                const pdy = enemy.y - player.y;
+                const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
+
+                if (pdist < enemy.attackRange && enemy.attackCooldown <= 0 && player.invincible <= 0) {
+                    enemy.attackCooldown = enemy.attackCooldownMax;
+                    player.hp -= enemy.attackDamage;
+                    player.invincible = 30;
+
+                    if (player.hp <= 0) {
+                        player.hp = player.maxHp;
+                        player.x = canvas.width * 0.15;
+                        player.y = canvas.height * 0.7;
+                        player.invincible = 60;
+                        deaths++;
+                        showMessage('💔 你被击败了！已复活');
+                    }
+                }
+
+                if (enemy.attackCooldown > 0) enemy.attackCooldown--;
+            });
+        }
+
+        // ============ 玩家移动 ============
+        function updatePlayer() {
+            // WASD + 方向键移动
+            if (keys['w'] || keys['arrowup']) player.y -= player.speed;
+            if (keys['s'] || keys['arrowdown']) player.y += player.speed;
+            if (keys['a'] || keys['arrowleft']) player.x -= player.speed;
+            if (keys['d'] || keys['arrowright']) player.x += player.speed;
+
+            // 边界限制
+            player.x = Math.max(25, Math.min(canvas.width - 25, player.x));
+            player.y = Math.max(25, Math.min(canvas.height - 25, player.y));
+
+            // 冷却更新
+            if (player.attackCooldown > 0) player.attackCooldown--;
+            if (player.invincible > 0) player.invincible--;
+
+            // ============ 鼠标左键攻击 ============
+            if (mouseDown && player.attackCooldown <= 0) {
+                attackEnemy();
+            }
+        }
+
+        // ============ 渲染 ============
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 背景
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#1a1a2e');
+            gradient.addColorStop(0.5, '#2a1a0a');
+            gradient.addColorStop(1, '#1a1a2e');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 道路
+            ctx.fillStyle = '#3a3a2a';
+            ctx.fillRect(0, canvas.height * 0.35, canvas.width, canvas.height * 0.3);
+            ctx.strokeStyle = '#5a5a3a';
+            ctx.setLineDash([20, 40]);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height * 0.5);
+            ctx.lineTo(canvas.width, canvas.height * 0.5);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 玩家水晶
+            ctx.fillStyle = playerCrystal.color;
+            ctx.fillRect(playerCrystal.x, playerCrystal.y, playerCrystal.width, playerCrystal.height);
+            ctx.fillStyle = '#fff';
+            ctx.font = '14px "KaiTi", "Microsoft YaHei"';
+            ctx.textAlign = 'center';
+            ctx.fillText('🏰 我方', playerCrystal.x + playerCrystal.width / 2, playerCrystal.y + playerCrystal.height / 2);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(playerCrystal.x, playerCrystal.y - 15, playerCrystal.width, 8);
+            ctx.fillStyle = '#00ff88';
+            ctx.fillRect(playerCrystal.x, playerCrystal.y - 15, playerCrystal.width * (playerCrystalHp / 100), 8);
+
+            // 敌方水晶
+            ctx.fillStyle = enemyCrystal.color;
+            ctx.fillRect(enemyCrystal.x, enemyCrystal.y, enemyCrystal.width, enemyCrystal.height);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('🏰 敌方', enemyCrystal.x + enemyCrystal.width / 2, enemyCrystal.y + enemyCrystal.height / 2);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(enemyCrystal.x, enemyCrystal.y - 15, enemyCrystal.width, 8);
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(enemyCrystal.x, enemyCrystal.y - 15, enemyCrystal.width * (enemyCrystalHp / 100), 8);
+
+            // 玩家
+            if (player.invincible <= 0 || Math.floor(player.invincible / 4) % 2 === 0) {
+                ctx.fillStyle = player.color;
+                ctx.fillRect(player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+                // 按住鼠标时显示攻击范围
+                if (mouseDown) {
+                    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, player.attackRange, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 14px "KaiTi", "Microsoft YaHei"';
+            ctx.textAlign = 'center';
+            ctx.fillText(player.name, player.x, player.y - 35);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(player.x - 30, player.y - 25, 60, 8);
+            ctx.fillStyle = '#00ff88';
+            ctx.fillRect(player.x - 30, player.y - 25, 60 * (player.hp / player.maxHp), 8);
+            ctx.textAlign = 'start';
+
+            // 敌人
+            enemies.forEach(enemy => {
+                ctx.fillStyle = enemy.color;
+                ctx.fillRect(enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height);
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.fillText(enemy.name, enemy.x, enemy.y - 25);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(enemy.x - 25, enemy.y - 18, 50, 6);
+                ctx.fillStyle = '#ff4444';
+                ctx.fillRect(enemy.x - 25, enemy.y - 18, 50 * (enemy.hp / enemy.maxHp), 6);
+                ctx.textAlign = 'start';
+            });
+
+            // 冷却指示
+            if (player.attackCooldown > 0) {
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.font = '16px "KaiTi", "Microsoft YaHei"';
+                ctx.textAlign = 'center';
+                ctx.fillText('⏳ 冷却中...', player.x, player.y + 40);
+                ctx.textAlign = 'start';
+            }
+        }
+
+        // ============ 游戏结束 ============
+        function endGame(result) {
+            const endPanel = document.getElementById('endPanel');
+            const endTitle = document.getElementById('endTitle');
+            const endStats = document.getElementById('endStats');
+
+            if (result === GAME_STATE.WIN) {
+                endTitle.textContent = '🏆 胜 利 ！';
+                endStats.innerHTML = `
+                    使用英雄：<span style="color:#ffd700;">${heroData.name}</span><br>
+                    击杀数：<span style="color:#ffd700;">${kills}</span><br>
+                    死亡数：<span style="color:#ffd700;">${deaths}</span><br>
+                    我方水晶剩余：<span style="color:#00ff88;">${Math.max(0, Math.floor(playerCrystalHp))} HP</span>
+                `;
+            } else {
+                endTitle.textContent = '💔 失 败';
+                endStats.innerHTML = `
+                    使用英雄：<span style="color:#ffd700;">${heroData.name}</span><br>
+                    击杀数：<span style="color:#ffd700;">${kills}</span><br>
+                    死亡数：<span style="color:#ffd700;">${deaths}</span><br>
+                    敌方水晶剩余：<span style="color:#ff4444;">${Math.max(0, Math.floor(enemyCrystalHp))} HP</span>
+                `;
+            }
+            endPanel.classList.add('show');
+        }
+
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+
+        // ============ 游戏循环 ============
+        function gameLoop() {
+            if (gameState === GAME_STATE.PLAYING) {
+                updatePlayer();
+                updateEnemies();
+                updateHUD();
+                draw();
+                requestAnimationFrame(gameLoop);
+            } else {
+                draw();
+                updateHUD();
+                endGame(gameState);
+            }
+        }
+
+        // ============ 窗口大小调整 ============
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            playerCrystal.x = canvas.width * 0.05;
+            playerCrystal.y = canvas.height * 0.5;
+            enemyCrystal.x = canvas.width * 0.9;
+            enemyCrystal.y = canvas.height * 0.5;
+        });
+
+        // ============ 启动游戏 ============
+        showMessage('⚔ 墨家机关道 · 开战！', 2000);
+        updateHUD();
+        gameLoop();
+    </script>
+</body>
+</html>
